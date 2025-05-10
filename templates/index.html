@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>{{ title }}</h1>
+        
+        <div class="camera-container">
+            <video id="camera" width="640" height="480" autoplay></video>
+            <button onclick="capture()">Capture & Search</button>
+        </div>
+
+        <div class="gallery" id="gallery"></div>
+        
+        <div id="modal" class="modal">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <img class="modal-content" id="modal-img">
+        </div>
+    </div>
+
+    <script>
+        let cameraStream = null;
+
+        // Camera access
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                document.getElementById('camera').srcObject = stream;
+                cameraStream = stream;
+            })
+            .catch(error => {
+                alert('Camera error: ' + error.message);
+            });
+
+        function capture() {
+            const video = document.getElementById('camera');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const image = canvas.toDataURL('image/jpeg');
+            
+            fetch('/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: image })
+            }).then(handleResponse);
+        }
+
+        function handleResponse(response) {
+            if (!response.ok) return response.json().then(alert);
+            
+            response.json().then(data => {
+                const gallery = document.getElementById('gallery');
+                gallery.innerHTML = '';
+                
+                data.matches.forEach(filename => {
+                    const img = document.createElement('img');
+                    img.src = `/photos/${encodeURIComponent(filename)}`;
+                    img.onclick = () => showModal(img.src);
+                    gallery.appendChild(img);
+                });
+            });
+        }
+
+        function showModal(src) {
+            const modal = document.getElementById('modal');
+            const modalImg = document.getElementById('modal-img');
+            modal.style.display = 'block';
+            modalImg.src = src;
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

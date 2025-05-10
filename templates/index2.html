@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Face Search</title>
+    <style>
+        #camera { border: 2px solid #ccc; margin: 10px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .results img { height: 150px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Camera Face Search</h1>
+        
+        <div>
+            <input type="text" id="directory" placeholder="/path/to/photos">
+            <button onclick="changeDirectory()">Change Directory</button>
+        </div>
+
+        <div>
+            <video id="camera" width="640" height="480" autoplay></video>
+            <button onclick="capture()">Capture & Search</button>
+        </div>
+
+        <div id="status"></div>
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        let cameraStream = null;
+
+        // Access camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                document.getElementById('camera').srcObject = stream;
+                cameraStream = stream;
+            })
+            .catch(error => {
+                alert('Error accessing camera: ' + error.message);
+            });
+
+        function capture() {
+            const video = document.getElementById('camera');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const image = canvas.toDataURL('image/jpeg');
+            
+            fetch('/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: image })
+            }).then(handleSearchResponse);
+        }
+
+        function changeDirectory() {
+            const path = document.getElementById('directory').value;
+            fetch('/change_directory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `directory=${encodeURIComponent(path)}`
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.error) alert(data.error);
+                  else alert(`Loaded ${data.file_count} photos from ${path}`);
+              });
+        }
+
+        function handleSearchResponse(response) {
+            if (!response.ok) {
+                return response.json().then(data => alert(data.error));
+            }
+            
+            response.json().then(data => {
+                if (data.matches.length === 0) {
+                    alert('No matches found');
+                    return;
+                }
+                
+                const results = document.getElementById('results');
+                results.innerHTML = '';
+                data.matches.forEach(filename => {
+                    const img = document.createElement('img');
+                    img.src = `/photos/${encodeURIComponent(filename)}`;
+                    img.title = filename;
+                    results.appendChild(img);
+                });
+            });
+        }
+
+        // Check progress periodically
+        setInterval(() => {
+            fetch('/progress').then(r => r.json()).then(data => {
+                document.getElementById('status').innerHTML = `
+                    Processing: ${data.processed}/${data.total}<br>
+                    Matches found: ${data.matches.length}
+                `;
+            });
+        }, 500);
+    </script>
+</body>
+</html>

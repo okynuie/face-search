@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Search</title>
+    <style>
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 80px);
+            gap: 5px; /* Adjust gap as needed */
+        }
+        .gallery img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover; /* Crop/resize to fit */
+        }
+    </style>
+</head>
+<body>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture">Capture</button>
+    <canvas id="canvas" width="640" height="480" style="display: none;"></canvas>
+    <div id="results"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const captureButton = document.getElementById('capture');
+        const resultsDiv = document.getElementById('results');
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            });
+
+        captureButton.addEventListener('click', () => {
+            context.drawImage(video, 0, 0, 640, 480);
+            const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
+
+            fetch('/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultsDiv.innerHTML = '';
+                if (data.matches && data.matches.length > 0) {
+                    resultsDiv.className = 'gallery'; // Apply gallery class
+                    data.matches.forEach(match => {
+                        resultsDiv.innerHTML += `<img src="${match}" alt="Match">`;
+                    });
+                } else {
+                    resultsDiv.innerHTML = '<p>No matches found.</p>';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

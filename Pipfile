@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+opencv-python = "*"
+face-recognition = "*"
+face-recognition-models = "*"
+pillow = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.13"

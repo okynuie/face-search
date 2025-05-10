@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container admin">
+        <h1>Admin Settings</h1>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>Page Title:</label>
+                <input type="text" name="title" value="{{ current_title }}">
+            </div>
+            
+            <div class="form-group">
+                <label>Photo Directory:</label>
+                <input type="text" name="photo_dir" value="{{ current_dir }}">
+                <small>Absolute path to directory containing photos</small>
+            </div>
+            
+            <button type="submit">Save Settings</button>
+        </form>
+        
+        <a href="/">Back to Main Page</a>
+    </div>
+</body>
+</html>
