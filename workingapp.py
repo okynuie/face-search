@@ -4,7 +4,6 @@ import numpy as np
 import face_recognition
 from flask import Flask, render_template_string, request, redirect, url_for, session, flash, jsonify, send_from_directory
 from flask import session
-from flask import send_from_directory
 from functools import wraps
 from werkzeug.utils import secure_filename
 
@@ -32,18 +31,8 @@ def save_config(config):
 
 config = load_config()
 
-# Configure the upload folder
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-
-app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'photos')
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
 # Ensure photo directory exists
 os.makedirs(config['photo_dir'], exist_ok=True)
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Authentication helpers
 def login_required(f):
@@ -177,42 +166,6 @@ def clear_search():
     flash('Search results cleared.', 'success')
     return redirect(url_for('gallery'))
 
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        # Check if the post request has the file part
-        if 'file' not in request.files:
-            return render_template_string('No file part')
-        file = request.files['file']
-        # If the user does not select a file, the browser submits an
-        # empty file without a filename.
-        if file.filename == '':
-            return render_template_string('No selected file')
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
-            return render_template_string('File uploaded successfully: <a href="{{ url_for(\'uploaded_file\', filename=filename) }}">{{ filename }}</a>')
-    return render_template_string('''
-    <!doctype html>
-    <html>
-    <head>
-        <title>Upload File</title>
-    </head>
-    <body>
-        <h1>Upload new File</h1>
-        <form method=post enctype=multipart/form-data>
-            <input type=file name=file>
-            <input type=submit value=Upload>
-        </form>
-    </body>
-    </html>
-    ''')
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
 # --- HTML TEMPLATES ---
 
 LOGIN_HTML = """
@@ -272,29 +225,17 @@ ADMIN_HTML = """
     {% if error %}
         <div class="error">{{ error }}</div>
     {% endif %}
-    <form method="post" enctype="multipart/form-data">
+    <form method="post">
         <label for="title">Site Title:</label>
-        <input id="title" name="title" value="{{ config.title }}">
-        <label for="photo_upload">Upload Photos:</label>
-        <input type="file" id="photo_upload" name="photo_upload" multiple accept="image/*">
+        <input id="title" name="title" value="{{ config.title }}" required>
+        <label for="photo_dir">Photo Directory:</label>
+        <input id="photo_dir" name="photo_dir" value="{{ config.photo_dir }}" required>
         <br><br>
-        <button type="submit" value>Save Title & Upload Photos</button>
-        <p>Upload one or more image files (.png, .jpg, .jpeg, .gif) to the server's "<span style="font-weight:bold;">{{ config.photo_dir }}</span>" directory.</p>
-        <p>The URL for uploaded photos will be automatically set to: <span style="font-weight:bold;">{{ url_for('photos', filename='example.jpg', _external=True).replace('/example.jpg', '/') }}</span></p>
+        <button type="submit">Save Configuration</button>
     </form>
 </body>
 </html>
 """
-
-
-    # <form method="post">
-    #     <label for="title">Site Title:</label>
-    #     <input id="title" name="title" value="{{ config.title }}" required>
-    #     <label for="photo_dir">Photo Directory:</label>
-    #     <input id="photo_dir" name="photo_dir" value="{{ config.photo_dir }}" required>
-    #     <br><br>
-    #     <button type="submit">Save Configuration</button>
-    # </form>
 
 INDEX_HTML = """
 <!DOCTYPE html>
